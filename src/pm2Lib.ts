@@ -1,9 +1,23 @@
 import pm2, { Proc, ProcessDescription, StartOptions } from 'pm2';
 import { promisify } from 'util';
+import { EventEmitter } from 'events';
+
+export interface IProcessOutLog {
+  data: string;
+  at: number;
+  process: {
+    namespace: string;
+    rev: string;
+    name: string;
+    pm_id: number;
+  };
+}
 
 class Pm2Lib {
   private readonly SCRIPT_PATH = process.env.SCRIPT_PATH;
   private readonly MINERS = ['miner01.js', 'miner02.js'];
+
+  private bus: EventEmitter | undefined;
 
   async getProcesses(): Promise<ProcessDescription[]> {
     const processes: ProcessDescription[] = [];
@@ -37,6 +51,15 @@ class Pm2Lib {
 
   async stopProcess(filename: string): Promise<Proc> {
     return promisify(pm2.stop).call(pm2, filename);
+  }
+
+  async onLogOut(onLog: (logObj: IProcessOutLog) => void) {
+    if (!this.bus) {
+      this.bus = await promisify<EventEmitter>(pm2.launchBus).call(pm2)
+    }
+    this.bus.on('log:out', (procLog: IProcessOutLog) => {
+      onLog(procLog);
+    });
   }
 
   private getStartOptions(filename: string): StartOptions {

@@ -1,5 +1,7 @@
 (function ($, window, document) {
   $(async function () {
+    const socket = io();
+
     function getStatusBadge(status) {
       switch (status) {
         case "stopped":
@@ -16,6 +18,9 @@
         return `
           <button type="button" class="btn btn-outline-danger" data-action="stop" title="stop">
             <i class="bi bi-pause-circle"></i>
+          </button>
+          <button type="button" class="btn btn-outline-warning" data-action="tail-log" title="show log">
+            <i class="bi bi-terminal"></i>
           </button>
       `;
       }
@@ -59,6 +64,17 @@
       $('#tbl-miners tbody').html(trs.join(''));
     }
 
+    function showStdLog(process) {
+      const $console = $('#console');
+      $console.empty();
+      socket.removeAllListeners();
+
+      socket.on(`${process}:out_log`, (procLog) => {
+        $console.append(`<p id="console-text">${procLog.data}</p>`);
+        $('#console-background').animate({ scrollTop: $console[0].scrollHeight + 1000 }, 500);
+      });
+    }
+
     updateMinersStatus();
 
     setInterval(() => {
@@ -69,6 +85,10 @@
       const self = $(this);
       const action = self.data('action');
       const process = self.parents('tr').attr('id');
+
+      if (!action) {
+        return;
+      }
 
       if (action && process && ['start', 'stop', 'restart'].indexOf(action) >= 0) {
         try {
@@ -81,6 +101,10 @@
         } catch (error) {
           alert(error.message);
         }
+      }
+
+      if (action === 'tail-log') {
+        showStdLog(process);
       }
     });
   });

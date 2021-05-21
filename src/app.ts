@@ -1,5 +1,6 @@
 import express from 'express';
 import pm2Lib from './pm2Lib';
+import socketIO from './socketIO';
 
 const app = express();
 
@@ -38,6 +39,8 @@ app.put('/miners/:filename/:action(start|restart|stop)', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
+const httpServer = app.listen(PORT, () => {
   console.log(`[Server] Listening on :${PORT}`);
 });
+
+socketIO.init(httpServer);
